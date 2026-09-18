@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.6
+
+- Local `npm run coauthor` validates `Co-authored-by` trailers from `git log` without `GH_TOKEN`. CI runs it on the triggering ref; solo commits without trailers remain allowed.
+- `npm test` now sets `--test-timeout=30000` so a hung test fails the job instead of sitting until the runner limit.
+- Persian contribution checklist and achievement notes state that Quickdraw (close within about five minutes) and YOLO (merge without review) are not automated and are out of scope.
+
 ## 0.3.4
 
 - Token-bearing workflows (`Validate co-authors`, `Collaboration progress report`) check out the default branch only. Co-author validation still reads PR commits through the API; it does not execute the PR tree.
