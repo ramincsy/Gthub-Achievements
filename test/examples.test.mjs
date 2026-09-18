@@ -64,6 +64,8 @@ test('pair Extraordinaire example uses verified public ids and a locally checked
   assert.match(markdown, /gh api users\/ramincsy --jq \.id/);
   assert.match(markdown, /تضمین نمی‌شود/);
   assert.match(markdown, /بازنویسی می‌کند/);
+  assert.match(markdown, /#22/);
+  assert.match(markdown, /ایمیل شخصی هم نشست/);
   assert.match(markdown, /نشسته روی شاخهٔ پیش‌فرض|نشسته‌روی پیش‌فرض/);
   const { stdout } = await runBash(extract(markdown, 'runnable', 'pair-trailer'));
   assert.match(stdout, /OK pair-trailer/);
