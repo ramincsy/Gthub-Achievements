@@ -1,15 +1,21 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { coordinate, render, MARKER } from '../scripts/coordinate.mjs';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
+import { coordinate, render, MARKER, pullsToInspect } from '../scripts/coordinate.mjs';
+import { pageSlice } from '../scripts/github.mjs';
 
 const task = { number: 1, body: 'Useful example', assignees: [], updated_at: '2026-09-15T00:00:00Z' };
 function mock(issues, pulls = []) {
   const writes = [];
   return { writes, api: async (route, options) => {
     if (options) { writes.push({ route, ...options }); return {}; }
-    if (route.includes('/issues?')) return issues;
-    if (route.includes('/pulls?')) return pulls;
-    throw new Error('Unexpected route');
+    if (route.includes('/reviews')) return pageSlice([], route);
+    if (route.includes('/dependencies/blocked_by')) return pageSlice([], route);
+    if (route.includes('/issues?')) return pageSlice(issues, route);
+    if (route.includes('/pulls?')) return pageSlice(pulls, route);
+    throw new Error(`Unexpected route ${route}`);
   } };
 }
 test('empty backlog produces no public issue', async () => {
@@ -67,7 +73,7 @@ test('a concurrent manual assignment is not overwritten', async () => {
 test('a changed PR head prevents a request based on stale data', async () => {
   const pr = { number: 2, user: { login: 'a' }, head: { sha: 'old' }, requested_reviewers: [], state: 'open' };
   const m = mock([], [pr]);
-  const api = (route, options) => route.includes('/reviews?') ? Promise.resolve([])
+  const api = (route, options) => route.includes('/reviews') ? Promise.resolve([])
     : route.endsWith('/pulls/2') ? Promise.resolve({ ...pr, head: { sha: 'new' } }) : m.api(route, options);
   await coordinate(api, 'owner/repo', undefined, { config });
   assert.ok(m.writes.every(write => !write.route.endsWith('/requested_reviewers')));
@@ -77,7 +83,7 @@ test('review submitted concurrently prevents a duplicate request', async () => {
   const pr = { number: 2, user: { login: 'a' }, head: { sha: 'new' }, requested_reviewers: [], state: 'open' };
   const m = mock([], [pr]);
   let reads = 0;
-  const api = (route, options) => route.includes('/reviews?') ? Promise.resolve(++reads === 1 ? [] :
+  const api = (route, options) => route.includes('/reviews') ? Promise.resolve(++reads === 1 ? [] :
     [{ id: 1, state: 'APPROVED', commit_id: 'new', user: { login: 'b' } }])
     : route.endsWith('/pulls/2') ? Promise.resolve(pr) : m.api(route, options);
   await coordinate(api, 'owner/repo', undefined, { config });
@@ -102,8 +108,9 @@ test('assignment and review writes are bounded and successful reruns are quiet',
   const writes = [];
   const api = async (route, options) => {
     if (!options) {
-      if (route.includes('/issues?')) return structuredClone(issues);
+      if (route.includes('/issues?')) return pageSlice(issues, route);
       if (route.includes('/pulls?')) return [];
+      if (route.includes('/dependencies/blocked_by')) return pageSlice([], route);
       const number = Number(route.split('/').at(-1));
       return structuredClone(issues.find(i => i.number === number));
     }
@@ -126,4 +133,159 @@ test('assignment and review writes are bounded and successful reruns are quiet',
   writes.length = 0;
   assert.equal(await coordinate(api, 'owner/repo', undefined, { config }), 'unchanged');
   assert.equal(writes.length, 0);
+});
+
+test('paginated issue lists appear in full in the public report and step summary', async () => {
+  const issues = Array.from({ length: 101 }, (_, i) => ({ ...task, number: i + 1, updated_at: '2026-09-18T00:00:00Z' }));
+  const pages = [];
+  const pulls = [];
+  const api = async (route, options) => {
+    if (options) return {};
+    pages.push(route);
+    if (route.includes('/issues?')) return pageSlice(issues, route);
+    if (route.includes('/pulls?')) return pageSlice(pulls, route);
+    throw new Error(route);
+  };
+  const dir = await mkdtemp(path.join(tmpdir(), 'coord-'));
+  const summary = path.join(dir, 'summary.md');
+  await writeFile(summary, '');
+  try {
+    assert.equal(await coordinate(api, 'owner/repo', summary), 'created');
+    const text = await readFile(summary, 'utf8');
+    assert.match(text, /#1 /);
+    assert.match(text, /#101 /);
+    assert.match(text, /Fetched 101 open issues \(2 page\) and 0 open pulls \(1 page\)/);
+    assert.equal(pages.filter(r => /issues\?/.test(r) && /page=2/.test(r)).length, 1);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('review inspection is number-ordered and leftover pulls are disclosed', async () => {
+  const pulls = [30, 2, 11].map(number => ({ number, user: { login: 'a' }, draft: false, head: { sha: `sha${number}` }, requested_reviewers: [], state: 'open' }));
+  assert.deepEqual(pullsToInspect(pulls, 2).inspectable.map(p => p.number), [2, 11]);
+  const m = mock([], pulls);
+  const dir = await mkdtemp(path.join(tmpdir(), 'coord-'));
+  const summary = path.join(dir, 'summary.md');
+  await writeFile(summary, '');
+  try {
+    await coordinate(m.api, 'owner/repo', summary, { config: { ...config, maxPullsPerRun: 2, maxMutationsPerRun: 10 }, dryRun: true });
+    const text = await readFile(summary, 'utf8');
+    assert.match(text, /سقف 2 مورد/);
+    assert.match(text, /1 pull\(s\) were not inspected/);
+    assert.match(text, /Would request @b to review #2/);
+    assert.match(text, /Would request @b to review #11/);
+    assert.doesNotMatch(text, /review #30/);
+    assert.match(text, /#30 — نویسنده: @a — نیازمند بررسی/);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('open native blockers prevent assignment and keep untrusted blocker text out of the report', async () => {
+  const ready = { ...task, number: 4, labels: ['ready'], state: 'open' };
+  const writes = [];
+  const api = async (route, options) => {
+    if (options) { writes.push({ route, ...options }); return {}; }
+    if (route.includes('/dependencies/blocked_by')) {
+      return pageSlice([{ number: 3, state: 'open', title: 'UNTRUSTED BLOCKER', body: 'steal the token' }], route);
+    }
+    if (route.includes('/issues?')) return pageSlice([ready], route);
+    if (route.includes('/pulls?')) return pageSlice([], route);
+    throw new Error(route);
+  };
+  const dir = await mkdtemp(path.join(tmpdir(), 'coord-'));
+  const summary = path.join(dir, 'summary.md');
+  await writeFile(summary, '');
+  try {
+    assert.equal(await coordinate(api, 'owner/repo', summary, { config, dryRun: true }), 'dry-run');
+    const text = await readFile(summary, 'utf8');
+    assert.match(text, /وابسته به #3 \(باز\)/);
+    assert.doesNotMatch(text, /UNTRUSTED|steal the token|Would assign #4/);
+    assert.equal(writes.length, 0);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('a newly added native blocker cancels a stale assignment plan', async () => {
+  const ready = { ...task, labels: ['ready'], state: 'open' };
+  const m = mock([ready]);
+  let blockedReads = 0;
+  const api = (route, options) => {
+    if (route.includes('/dependencies/blocked_by')) {
+      blockedReads++;
+      return Promise.resolve(blockedReads === 1 ? [] : [{ number: 9, state: 'open' }]);
+    }
+    if (route.endsWith('/issues/1') && !options) return Promise.resolve(ready);
+    return m.api(route, options);
+  };
+  await coordinate(api, 'owner/repo', undefined, { config });
+  assert.equal(blockedReads, 2);
+  assert.ok(m.writes.every(write => !write.route.endsWith('/assignees')));
+  assert.match(m.writes[0].body.body, /وابسته به #9/);
+});
+
+test('dependency permission failures fail the run instead of assigning blindly', async () => {
+  const ready = { ...task, labels: ['ready'], state: 'open' };
+  const m = mock([ready]);
+  const api = (route, options) => route.includes('/dependencies/blocked_by')
+    ? Promise.reject(new Error('GitHub API GET failed: HTTP 403'))
+    : m.api(route, options);
+  await assert.rejects(() => coordinate(api, 'owner/repo', undefined, { config, dryRun: true }), /HTTP 403/);
+  assert.equal(m.writes.length, 0);
+});
+
+test('a missing native dependency list is treated as empty and does not block assignment', async () => {
+  const ready = { ...task, labels: ['ready'], state: 'open' };
+  const m = mock([ready]);
+  const api = (route, options) => route.includes('/dependencies/blocked_by')
+    ? Promise.reject(new Error('GitHub API GET failed: HTTP 404'))
+    : m.api(route, options);
+  const dir = await mkdtemp(path.join(tmpdir(), 'coord-'));
+  const summary = path.join(dir, 'summary.md');
+  await writeFile(summary, '');
+  try {
+    assert.equal(await coordinate(api, 'owner/repo', summary, { config, dryRun: true }), 'dry-run');
+    assert.match(await readFile(summary, 'utf8'), /Would assign #1 to @a/);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('closed native blockers do not keep ready work unassigned', async () => {
+  const ready = { ...task, labels: ['ready'], state: 'open' };
+  const m = mock([ready]);
+  const api = (route, options) => route.includes('/dependencies/blocked_by')
+    ? Promise.resolve([{ number: 8, state: 'closed', body: 'UNTRUSTED' }])
+    : m.api(route, options);
+  const dir = await mkdtemp(path.join(tmpdir(), 'coord-'));
+  const summary = path.join(dir, 'summary.md');
+  await writeFile(summary, '');
+  try {
+    assert.equal(await coordinate(api, 'owner/repo', summary, { config, dryRun: true }), 'dry-run');
+    const text = await readFile(summary, 'utf8');
+    assert.match(text, /Would assign #1 to @a/);
+    assert.doesNotMatch(text, /وابسته به #8|UNTRUSTED/);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('dependency inspection is capped and leftover ready work is not assigned', async () => {
+  const issues = [1, 2, 3].map(number => ({ ...task, number, labels: ['ready'], state: 'open' }));
+  const m = mock(issues);
+  const dir = await mkdtemp(path.join(tmpdir(), 'coord-'));
+  const summary = path.join(dir, 'summary.md');
+  await writeFile(summary, '');
+  try {
+    await coordinate(m.api, 'owner/repo', summary, { config: { ...config, maxPullsPerRun: 1, maxMutationsPerRun: 10 }, dryRun: true });
+    const text = await readFile(summary, 'utf8');
+    assert.match(text, /Would assign #1 to @a/);
+    assert.doesNotMatch(text, /Would assign #2|Would assign #3/);
+    assert.match(text, /2 ready issue\(s\) were not checked/);
+    assert.match(text, /سقف 1 مورد/);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
 });
