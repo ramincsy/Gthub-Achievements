@@ -5,6 +5,11 @@
 - Local `npm run coauthor` validates `Co-authored-by` trailers from `git log` without `GH_TOKEN`. CI runs it on the triggering ref; solo commits without trailers remain allowed.
 - `npm test` now sets `--test-timeout=30000` so a hung test fails the job instead of sitting until the runner limit.
 - Persian contribution checklist and achievement notes state that Quickdraw (close within about five minutes) and YOLO (merge without review) are not automated and are out of scope.
+## 0.3.5
+
+- Collaboration progress report counts well-formed peer `Co-authored-by` trailers on merged pull request commits (Pair Extraordinaire candidates only; not a grant).
+- Practical Persian Pair Extraordinaire example uses public Users API ids `34828058` (ramincsy) and `329678572` (backrebital-lgtm) and still requires Settings → Emails confirmation.
+- Two accounts share one owner; an automatic review request is not an independent human review. Achievements are not guaranteed.
 
 ## 0.3.4
 
