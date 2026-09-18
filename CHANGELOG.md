@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.9
+
+- Pair-path tests lock the squash-landed SHAs of #18 / #19 / #21 / #22. A second personal-email trailer on the same commit does not double-count; missing merge SHAs still fail closed.
+- README badge-path status includes #22 and states that only `ID+login` noreply co-authors are counted.
+
 ## 0.3.8
 
 - Pair-path progress counts commits that landed on the default branch (`merge_commit_sha`): squash/rebase uses that commit; a merge commit uses the PR's non-merge commits. Missing merge SHAs fail the run.

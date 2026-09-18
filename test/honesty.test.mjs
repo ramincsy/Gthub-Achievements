@@ -27,7 +27,10 @@ test('README states current achievement-path status without claiming a grant', a
   assert.match(readme, /اعطا نیست/);
   assert.match(readme, /cursor\[bot\]/);
   assert.match(readme, /نشسته روی شاخهٔ پیش‌فرض/);
+  assert.match(readme, /#22/);
+  assert.match(readme, /noreply/);
   assert.match(readme, /squash ممکن است نویسنده را به ادغام‌کننده عوض کند/);
+  assert.match(readme, /ایمیل شخصی روی همان commit دوباره شمرده نمی‌شود/);
   assert.match(readme, /Quickdraw \/ YOLO/);
   assert.match(readme, /Galaxy Brain/);
   assert.doesNotMatch(readme, /Achievement را تضمین می‌کنند/);

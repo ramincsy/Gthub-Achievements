@@ -240,8 +240,109 @@ test('collectPairPullCommits reads the merge commit SHA and only lists PR commit
 });
 
 test('mergeCommitSha accepts only a full git SHA', () => {
-  assert.equal(mergeCommitSha('953756b1d60d1645f13a51d48b2d21ffc1202140'), '953756b1d60d1645f13a51d48b2d21ffc1202140');
+  const sha = '953756b1d60d1645f13a51d48b2d21ffc1202140';
+  assert.equal(mergeCommitSha(sha), sha);
+  assert.equal(mergeCommitSha(`  ${sha}  `), sha);
+  assert.equal(mergeCommitSha(sha.toUpperCase()), sha.toUpperCase());
   assert.equal(mergeCommitSha('main'), null);
   assert.equal(mergeCommitSha('379fddf'), null);
   assert.equal(mergeCommitSha(''), null);
+});
+
+test('landedPairCommits fails closed when the merge commit SHA is missing', () => {
+  assert.throws(() => landedPairCommits({}), /missing a merge commit/);
+  assert.throws(() => landedPairCommits(null), /missing a merge commit/);
+  assert.throws(() => landedPairCommits({ parentCount: 2, message: 'Merge pull request #9' }), /missing a merge commit/);
+});
+
+test('pair path counts the squash-landed SHAs of #18/#19/#21/#22, not PR-branch SHAs', () => {
+  const participants = ['ramincsy', 'backrebital-lgtm'];
+  const ramincsy = {
+    authorLogin: 'ramincsy',
+    authorEmail: '34828058+ramincsy@users.noreply.github.com',
+    parentCount: 1
+  };
+  const branchSha = '379fddf9ed6307ed6ef1a077c3cbb3fbb36d455b';
+  const landed = [
+    {
+      number: 18,
+      ...ramincsy,
+      sha: '953756b1d60d1645f13a51d48b2d21ffc1202140',
+      message: [
+        'feat: count pair-path commits and document verified noreply trailers (#18)',
+        '',
+        'Co-authored-by: Cursor Agent <cursoragent@cursor.com>',
+        'Co-authored-by: backrebital-lgtm <329678572+backrebital-lgtm@users.noreply.github.com>'
+      ].join('\n')
+    },
+    {
+      number: 19,
+      ...ramincsy,
+      sha: '05c53383bc6183431e0af2f6875f1ea8ccba2d5c',
+      message: [
+        'feat: validate local Co-authored-by trailers and document Quickdraw/YOLO honesty (#19)',
+        '',
+        'Co-authored-by: Cursor Agent <cursoragent@cursor.com>',
+        'Co-authored-by: backrebital-lgtm <329678572+backrebital-lgtm@users.noreply.github.com>',
+        'Co-authored-by: backrebital-lgtm <backrebital@gmail.com>'
+      ].join('\n')
+    },
+    {
+      number: 21,
+      ...ramincsy,
+      sha: '45f82b4bb56127e6ae3fba09febea34bddffccdb',
+      message: [
+        'feat: request peer review on bot PRs that already carry member trailers (#21)',
+        '',
+        'Co-authored-by: Cursor Agent <cursoragent@cursor.com>',
+        'Co-authored-by: backrebital-lgtm <329678572+backrebital-lgtm@users.noreply.github.com>'
+      ].join('\n')
+    },
+    {
+      number: 22,
+      ...ramincsy,
+      sha: 'd6ebb0b46f8e8f7b2560884dc9f20c7cdc8ae804',
+      message: [
+        'feat: count pair-path commits that landed on the default branch (#22)',
+        '',
+        'Co-authored-by: Cursor Agent <cursoragent@cursor.com>',
+        'Co-authored-by: backrebital-lgtm <329678572+backrebital-lgtm@users.noreply.github.com>'
+      ].join('\n')
+    }
+  ];
+
+  for (const commit of landed) {
+    assert.deepEqual(landedPairCommits(commit, [{ sha: branchSha, parentCount: 1 }]).map(item => item.sha), [commit.sha]);
+  }
+
+  const nineteen = pairPathStats([{ number: 19, commits: [landed[1]] }], participants);
+  assert.deepEqual(nineteen, {
+    counts: { ramincsy: 0, 'backrebital-lgtm': 1 },
+    pairCommits: 1,
+    pairPulls: 1,
+    malformedTrailers: 0
+  });
+
+  const stats = pairPathStats(landed.map(commit => ({
+    number: commit.number,
+    commits: landedPairCommits(commit, [{ sha: branchSha, parentCount: 1 }])
+  })), participants);
+  assert.deepEqual(stats, {
+    counts: { ramincsy: 0, 'backrebital-lgtm': 4 },
+    pairCommits: 4,
+    pairPulls: 4,
+    malformedTrailers: 0
+  });
+});
+
+test('collectPairPullCommits fails closed when the merge commit payload has no SHA', async () => {
+  const sha = 'd6ebb0b46f8e8f7b2560884dc9f20c7cdc8ae804';
+  await assert.rejects(collectPairPullCommits(async () => ({
+    sha: '',
+    parents: [{ sha: 'parent' }],
+    commit: { message: 'squash', author: { email: 'a@b.co' } },
+    author: { login: 'ramincsy' }
+  }), 'ramincsy/Gthub-Achievements', [
+    { number: 22, merged_at: '2026-09-18T19:12:45Z', merge_commit_sha: sha }
+  ]), /missing a merge commit/);
 });
