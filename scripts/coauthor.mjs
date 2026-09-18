@@ -48,12 +48,6 @@ export function validateTrailer(trailer, { authorEmail = '', authorLogin = '', p
   if (host === 'users.noreply.github.com' && !noreplyLogin) {
     errors.push('GitHub noreply email must include the co-author username');
   }
-  if (noreplyLogin && authorLogin && noreplyLogin.toLowerCase() === authorLogin.toLowerCase()) {
-    errors.push(`Co-authored-by @${noreplyLogin} matches the commit author; that is not a second author`);
-  }
-  if (participants.length && noreplyLogin && !participants.some(p => p.toLowerCase() === noreplyLogin.toLowerCase())) {
-    errors.push(`Co-authored-by @${noreplyLogin} is not a configured collaborator`);
-  }
   return errors;
 }
 

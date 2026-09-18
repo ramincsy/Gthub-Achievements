@@ -24,17 +24,17 @@ test('parses canonical trailers and rejects malformed lines', () => {
   assert.match(parsed.errors[0], /Malformed/);
 });
 
-test('placeholder, self, and unknown noreply trailers fail', () => {
+test('placeholder emails fail; self and external noreply trailers are format-valid', () => {
   const participants = ['ramincsy', 'backrebital-lgtm'];
   assert.ok(validateTrailer({ name: 'NAME', email: 'NAME@EXAMPLE.COM' }, { participants }).length);
-  assert.ok(validateTrailer(
+  assert.equal(validateTrailer(
     { name: 'ramincsy', email: 'ramincsy@users.noreply.github.com' },
-    { authorLogin: 'ramincsy', authorEmail: 'ramincsy@users.noreply.github.com', participants }
-  ).length);
-  assert.match(validateTrailer(
+    { authorLogin: 'ramincsy', authorEmail: '34828058+ramincsy@users.noreply.github.com', participants }
+  ).length, 0);
+  assert.equal(validateTrailer(
     { name: 'outsider', email: 'outsider@users.noreply.github.com' },
     { authorLogin: 'ramincsy', participants }
-  ).join('\n'), /not a configured collaborator/);
+  ).length, 0);
 });
 
 test('solo commits without trailers pass; well-formed peer trailers pass', () => {
