@@ -39,7 +39,7 @@ Co-authored-by: backrebital-lgtm <329678572+backrebital-lgtm@users.noreply.githu
 
 قواعد همان [انتساب commit](attribution.fa.md) است: یک خط خالی پیش از trailerها، املای `Co-authored-by:`، و بدون دامنهٔ نمونه (`example.com`).
 
-**squash merge پیام نهایی را بازنویسی می‌کند.** در #18 / #19 / #21 / #22 مشاهده شد: ادغام‌کننده نویسندهٔ commit روی `main` شد، trailer خودِ او حذف شد، و نویسندهٔ اصلی PR (`cursor[bot]`) به `Co-authored-by` تبدیل شد. در #19 یک trailer ایمیل شخصی هم نشست؛ گزارش pair فقط noreply `ID+login` را می‌شمارد و همان همکار را دوباره حساب نمی‌کند. گزارش پیشرفت pair همان commit نشسته‌روی پیش‌فرض را می‌شمارد، نه trailerهای شاخهٔ PR که squash نگه نداشته. اگر trailer لازم است باید در پیام squash/merge باقی بماند.
+**squash merge پیام نهایی را بازنویسی می‌کند.** در squash به `main` در این مخزن مشاهده شد: ادغام‌کننده نویسندهٔ commit روی `main` شد، trailer خودِ او حذف شد، و نویسندهٔ اصلی PR (`cursor[bot]`) به `Co-authored-by` تبدیل شد. در #19 یک trailer ایمیل شخصی هم نشست؛ گزارش pair فقط noreply `ID+login` را می‌شمارد و همان همکار را دوباره حساب نمی‌کند. تست‌ها SHAهای squash-نشسته را قفل می‌کنند. گزارش پیشرفت pair همان commit نشسته‌روی پیش‌فرض را می‌شمارد، نه trailerهای شاخهٔ PR که squash نگه نداشته. اگر trailer لازم است باید در پیام squash/merge باقی بماند.
 
 ## آزمایش محلی قالب (بدون هل دادن)
 

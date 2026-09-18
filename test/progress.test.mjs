@@ -6,6 +6,7 @@ import {
   mergedPullCounts,
   mergeCommitSha,
   landedPairCommits,
+  pairAuthorLogin,
   pairPathStats,
   renderProgress,
   collectMergedPulls,
@@ -333,6 +334,45 @@ test('pair path counts the squash-landed SHAs of #18/#19/#21/#22, not PR-branch 
     pairPulls: 4,
     malformedTrailers: 0
   });
+});
+
+test('pair path does not count a self-trailer when GitHub omits author.login but the git email is that member noreply', () => {
+  const stats = pairPathStats([{
+    number: 23,
+    commits: [{
+      sha: 'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
+      authorLogin: '',
+      authorEmail: 'ramincsy@users.noreply.github.com',
+      message: [
+        'docs: unlinked author object',
+        '',
+        'Co-authored-by: ramincsy <34828058+ramincsy@users.noreply.github.com>',
+        'Co-authored-by: backrebital-lgtm <329678572+backrebital-lgtm@users.noreply.github.com>'
+      ].join('\n')
+    }]
+  }], ['ramincsy', 'backrebital-lgtm']);
+  assert.equal(pairAuthorLogin({
+    authorLogin: '',
+    authorEmail: 'ramincsy@users.noreply.github.com'
+  }), 'ramincsy');
+  assert.deepEqual(stats, {
+    counts: { ramincsy: 0, 'backrebital-lgtm': 1 },
+    pairCommits: 1,
+    pairPulls: 1,
+    malformedTrailers: 0
+  });
+});
+
+test('collectPairPullCommits fails closed when the merge commit payload SHA does not match', async () => {
+  const sha = '76374a76a386880ff16be54f16461d8cb9b648d5';
+  await assert.rejects(collectPairPullCommits(async () => ({
+    sha: 'd6ebb0b46f8e8f7b2560884dc9f20c7cdc8ae804',
+    parents: [{ sha: 'parent' }],
+    commit: { message: 'squash', author: { email: 'a@b.co' } },
+    author: { login: 'ramincsy' }
+  }), 'ramincsy/Gthub-Achievements', [
+    { number: 23, merged_at: '2026-09-18T19:28:37Z', merge_commit_sha: sha }
+  ]), /missing a merge commit/);
 });
 
 test('collectPairPullCommits fails closed when the merge commit payload has no SHA', async () => {

@@ -18,7 +18,10 @@ test('Persian docs say Quickdraw and YOLO are not project automation goals', asy
   assert.match(contributing, /npm run coauthor/);
   assert.match(contributing, /یک مالک/);
   assert.match(contributing, /trailer noreply خوش‌فرم یک عضو/);
+  assert.match(contributing, /نشسته روی شاخهٔ پیش‌فرض|نشسته‌روی `main`/);
+  assert.match(contributing, /پیام squash/);
   assert.doesNotMatch(contributing, /فقط وقتی نویسندهٔ GitHub برابر/);
+  assert.doesNotMatch(contributing, /با باز شدن PR، از عضو دیگر بررسی خواسته می‌شود/);
 });
 
 test('README states current achievement-path status without claiming a grant', async () => {
@@ -27,13 +30,22 @@ test('README states current achievement-path status without claiming a grant', a
   assert.match(readme, /اعطا نیست/);
   assert.match(readme, /cursor\[bot\]/);
   assert.match(readme, /نشسته روی شاخهٔ پیش‌فرض/);
-  assert.match(readme, /#22/);
+  assert.match(readme, /SHAهای squash-نشسته/);
   assert.match(readme, /noreply/);
   assert.match(readme, /squash ممکن است نویسنده را به ادغام‌کننده عوض کند/);
   assert.match(readme, /ایمیل شخصی روی همان commit دوباره شمرده نمی‌شود/);
   assert.match(readme, /Quickdraw \/ YOLO/);
   assert.match(readme, /Galaxy Brain/);
+  assert.match(readme, /npm run coauthor` در `CI/);
+  assert.doesNotMatch(readme, /پس از ادغام #18 \/ #19 \/ #21 \/ #22/);
   assert.doesNotMatch(readme, /Achievement را تضمین می‌کنند/);
+});
+
+test('workflow handbook states CI runs local trailer checks without a token', async () => {
+  const workflows = await readFile(new URL('../docs/workflows.fa.md', import.meta.url), 'utf8');
+  assert.match(workflows, /`CI`[\s\S]*npm run coauthor/);
+  assert.match(workflows, /git log/);
+  assert.match(workflows, /بدون `GH_TOKEN`/);
 });
 
 test('achievement config records Quickdraw and YOLO as not automated', async () => {

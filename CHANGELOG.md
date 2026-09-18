@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.10
+
+- Contributor docs match current Actions: `CI` runs `npm run coauthor` on the PR ref without a token; pair progress still counts squash-landed default-branch commits, not PR-branch trailers.
+- README no longer dates badge-path status to a growing PR-number list. Pair counting ignores a self-trailer when GitHub omits `author.login` but the git author email is that member's noreply.
+- Two accounts share one owner; an automatic review request is not an independent human review. Achievements are not guaranteed.
+
 ## 0.3.9
 
 - Pair-path tests lock the squash-landed SHAs of #18 / #19 / #21 / #22. A second personal-email trailer on the same commit does not double-count; missing merge SHAs still fail closed.
