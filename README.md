@@ -13,12 +13,12 @@
 
 ## وضعیت مسیر نشان‌ها
 
-شمارش رویداد در این مخزن **اعطا نیست**. Achievements در public preview است و GitHub کاتالوگ کامل شرایط را منتشر نکرده. پس از ادغام #18 / #19 / #21 / #22:
+شمارش رویداد در این مخزن **اعطا نیست**. Achievements در public preview است و GitHub کاتالوگ کامل شرایط را منتشر نکرده. تست‌ها SHAهای squash-نشسته روی `main` را قفل می‌کنند؛ فهرست PR جایگزین اعطا نیست:
 
 | مسیر | چه پیاده شده | چه نیست |
 | --- | --- | --- |
 | Pull Shark | گزارش پیشرفت PRهای **mergeشده‌ای که همان عضو باز کرده** را می‌شمارد | PR با نویسندهٔ `cursor[bot]` برای ramincsy یا backrebital-lgtm شمرده نمی‌شود؛ close بدون merge شمرده نمی‌شود |
-| Pair Extraordinaire | قالب trailer محلی (`npm run coauthor`) و از API؛ پس از merge، commit **نشسته روی شاخهٔ پیش‌فرض** شمرده می‌شود (#22). فقط co-author **noreply** به شکل `ID+login` | squash ممکن است نویسنده را به ادغام‌کننده عوض کند و trailer خودِ نویسنده را حذف کند؛ ایمیل شخصی روی همان commit دوباره شمرده نمی‌شود؛ اتصال Settings → Emails اینجا تأیید نمی‌شود |
+| Pair Extraordinaire | قالب trailer محلی (`npm run coauthor` در `CI` بدون توکن) و از API (`Validate co-authors` با کد شاخهٔ پیش‌فرض)؛ پس از merge، commit **نشسته روی شاخهٔ پیش‌فرض** شمرده می‌شود. فقط co-author **noreply** به شکل `ID+login` | squash ممکن است نویسنده را به ادغام‌کننده عوض کند و trailer خودِ نویسنده را حذف کند؛ ایمیل شخصی روی همان commit دوباره شمرده نمی‌شود؛ اتصال Settings → Emails اینجا تأیید نمی‌شود |
 | بررسی متقابل | PR غیرپیش‌نویس عضو، یا PR عامل با trailer noreply خوش‌فرم عضو، از عضوی که هنوز reviewer نیست بررسی می‌خواهد | approve/merge نمی‌کند؛ دو reviewer مستقل نمی‌سازد |
 | Quickdraw / YOLO | فقط در راهنما آمده | بستن فوری یا merge بدون بررسی برای نشان؛ گردش‌کارها این کار را نمی‌کنند |
 | Galaxy Brain | قالب Discussions Q&A برای پرسش واقعی | پرسش و پاسخ نمایشی ساخته نمی‌شود |

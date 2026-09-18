@@ -28,7 +28,7 @@
 
 | گردش‌کار | نقش | چه می‌کند | چه نمی‌کند |
 | --- | --- | --- | --- |
-| `CI` | سلامت | `npm test` و `npm run check` روی `opened` / `synchronize` / `reopened` / `ready_for_review`؛ **کد همان PR** را بدون `GH_TOKEN` اجرا می‌کند | درخواست بررسی، merge |
+| `CI` | سلامت | `npm test`، `npm run check` و `npm run coauthor` روی `opened` / `synchronize` / `reopened` / `ready_for_review`؛ **کد همان PR** را بدون `GH_TOKEN` اجرا می‌کند (`git log` محلی) | درخواست بررسی، merge، اتصال ایمیل به حساب |
 | `Validate co-authors` | Pair Extraordinaire (قالب) | trailerهای `Co-authored-by` را از API همان PR می‌خواند و با **کد شاخهٔ پیش‌فرض** می‌سنجد | ایمیل را به حساب وصل نمی‌کند؛ trailer نمی‌سازد؛ کد PR را اجرا نمی‌کند |
 | `Request peer review` | بررسی متقابل | با PR غیرپیش‌نویس یکی از دو عضو، از عضو دیگر بررسی می‌خواهد؛ اگر نویسنده عضو نیست ولی trailer noreply خوش‌فرم یک عضو روی commit همان PR هست، از عضوی که هنوز reviewer نیست درخواست می‌شود؛ **کد شاخهٔ پیش‌فرض** را اجرا می‌کند | approve، merge، تکرار درخواست موجود، درخواست برای bot/خارجی بدون trailer عضو، اجرای کد PR |
 | `Hourly maintenance` | هماهنگی صف | واگذاری کار آماده، درخواست بررسی جاافتاده، به‌روزرسانی Issue وضعیت پس از تغییر صف یا ثبت/کنارگذاشتن review | کد نمی‌نویسد؛ PR خالی نمی‌سازد؛ merge نمی‌کند؛ review فقط-کامنت را اجرا نمی‌کند |

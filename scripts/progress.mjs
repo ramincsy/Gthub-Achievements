@@ -49,6 +49,12 @@ export function landedPairCommits(mergeCommit, pullCommits = []) {
   return [mergeCommit];
 }
 
+export function pairAuthorLogin(commit) {
+  const linked = String(commit?.authorLogin ?? '').trim();
+  if (linked) return linked;
+  return githubLoginFromNoreply(commit?.authorEmail) ?? '';
+}
+
 export function pairPathStats(pullsWithCommits, participants) {
   const counts = Object.fromEntries(participants.map(login => [login, 0]));
   let pairCommits = 0;
@@ -59,7 +65,7 @@ export function pairPathStats(pullsWithCommits, participants) {
     for (const commit of pull.commits ?? []) {
       const parsed = parseCoAuthorTrailers(commit.message);
       malformedTrailers += parsed.errors.length;
-      const authorLogin = String(commit.authorLogin ?? '').toLowerCase();
+      const authorLogin = pairAuthorLogin(commit).toLowerCase();
       const peers = new Set();
       for (const trailer of parsed.trailers) {
         const trailerErrors = validateTrailer(trailer, {
@@ -145,7 +151,9 @@ export async function collectPairPullCommits(api, repo, pulls) {
     const sha = mergeCommitSha(pull.merge_commit_sha);
     if (!sha) throw new Error(`Merged pull #${pull.number} is missing a merge commit SHA.`);
     const mergeCommit = mapPullCommits([await api(`/repos/${repo}/commits/${sha}`)])[0];
-    if (!mergeCommit?.sha) throw new Error(`Merged pull #${pull.number} is missing a merge commit.`);
+    if (!mergeCommit?.sha || mergeCommit.sha.toLowerCase() !== sha.toLowerCase()) {
+      throw new Error(`Merged pull #${pull.number} is missing a merge commit.`);
+    }
     let pullCommits = [];
     if ((mergeCommit.parentCount ?? 0) >= 2) {
       pullCommits = mapPullCommits(await listAll(api, `/repos/${repo}/pulls/${pull.number}/commits`));
