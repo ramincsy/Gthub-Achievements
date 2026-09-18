@@ -1,11 +1,11 @@
 import { appendFile, readFile } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
 import { createApi, listAll } from './github.mjs';
-import { planAssignments, reviewerFor, reviewState } from './planner.mjs';
+import { planAssignments, reviewerFor, reviewState, issueNextAction, pullNextAction } from './planner.mjs';
 
 export const MARKER = '<!-- gthub-achievements:coordination:v1 -->';
 const isReport = issue => issue.user?.login === 'github-actions[bot]' && issue.body?.includes(MARKER);
-export function render(issues, pulls) {
+export function render(issues, pulls, config) {
   const tasks = issues.filter(i => !i.pull_request && !isReport(i));
   const lines = [MARKER, '# وضعیت همکاری', '',
     'گزارش خودکار؛ این متن review یا تأیید انسانی نیست.', '',
@@ -13,12 +13,14 @@ export function render(issues, pulls) {
     '## PRهای باز', ''];
   for (const pr of [...pulls].sort((a, b) => a.number - b.number)) {
     lines.push(`- #${pr.number} — نویسنده: @${pr.user.login} — ${pr.draft ? 'پیش‌نویس' : pr.reviewStatus ?? 'نیازمند بررسی'} — commit: \`${pr.head.sha}\``);
+    if (config) lines.push(`  - اقدام بعدی: ${pullNextAction(pr, config.participants)}`);
   }
   if (!pulls.length) lines.push('PR بازی وجود ندارد.');
   lines.push('', '## کارهای باز', '');
   for (const item of [...tasks].sort((a, b) => a.number - b.number)) {
     const assignees = (item.assignees ?? []).map(a => `@${a.login}`).sort().join(', ');
     lines.push(`- #${item.number} — ${assignees || 'بدون مسئول'} — آخرین تغییر: ${item.updated_at}`);
+    if (config) lines.push(`  - اقدام بعدی: ${issueNextAction(item, config)}`);
   }
   if (!tasks.length) lines.push('کار بازی وجود ندارد.');
   lines.push('', 'جزئیات و پرسش‌های واقعی را در Issue یا PR مربوط ثبت کنید. دریافت Achievement به پردازش GitHub وابسته است.');
@@ -82,7 +84,7 @@ export async function coordinate(api, repo, summaryPath, options = {}) {
       pull.reviewStatus = reviewState({ ...fresh, requested_reviewers: [{ login: reviewer }] }, freshReviews);
     }
   }
-  const report = render(issues, pulls);
+  const report = render(issues, pulls, config);
   if (summaryPath) await appendFile(summaryPath, report.body + '\n\n## Run result\n\n' +
     (dryRun ? 'Dry run; no writes.' : `${mutations} assignment/review writes completed.`) + '\n\n' +
     (plans.length ? plans.map(p => `- ${p}`).join('\n') : 'No assignment or review action needed.') + '\n');
