@@ -1,3 +1,5 @@
+**Moved:** The contribution playbooks and review-oriented tooling from this repository are being consolidated in [`ramincsy/dev-lab`](https://github.com/ramincsy/dev-lab). This repository remains available as historical context; use the dev-lab documentation for the maintained scaffold. Nothing here promises GitHub Achievements or substitutes for meaningful work and human review.
+
 # Gthub Achievements
 
 راهنمای فارسی همکاری در GitHub و پیگیری فعالیت‌های واقعی پروژه. نام مخزن با املای `Gthub` ثبت شده و عمداً تغییر داده نمی‌شود.
