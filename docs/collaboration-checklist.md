@@ -12,12 +12,12 @@ Use this checklist for small, reviewable changes made with a second human contri
 ## Before merging
 
 - Ask the second contributor to review the diff and the checks.
-- Prefer a merge method that preserves the co-author trailers.
+- Prefer **Create a merge commit** in the GitHub merge menu (avoid squash when you need trailers preserved on `main`).
 - After merging, open the commit on `main` and confirm both contributor identities are visible.
 
 ## Example footer
 
-```text
+```
 Co-authored-by: Contributor One <12345+contributor-one@users.noreply.github.com>
 Co-authored-by: Contributor Two <67890+contributor-two@users.noreply.github.com>
 ```
